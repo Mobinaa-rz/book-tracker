@@ -1,0 +1,113 @@
+/* ==========================================================================
+   Design tokens — "Paper & Ink"
+   Every colour, size and radius used in the app is defined here.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --surface-2: #f1efea;
+  --surface-3: #e9e6df;
+
+  /* Borders */
+  --border: #e6e3dc;
+  --border-strong: #d3cfc6;
+
+  /* Text */
+  --text: #1a1917;
+  --text-2: #5b5750;
+  --text-3: #8f8a80;
+  --text-on-primary: #ffffff;
+
+  /* Primary (ink) */
+  --primary: #1a1917;
+  --primary-hover: #2c2926;
+  --primary-soft: #eceae4;
+
+  /* Accent (teal) — links, focus rings, selected states */
+  --accent: #0f766e;
+  --accent-hover: #0b5f59;
+  --accent-soft: #e6f3f1;
+
+  /* Danger */
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+
+  /* Success */
+  --success: #16a34a;
+  --success-soft: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  /* Status: Want to Read (amber) */
+  --status-want-bg: #fef3c7;
+  --status-want-text: #92400e;
+  --status-want-dot: #f59e0b;
+
+  /* Status: Reading (blue) */
+  --status-reading-bg: #dbeafe;
+  --status-reading-text: #1e40af;
+  --status-reading-dot: #2563eb;
+
+  /* Status: Finished (green) */
+  --status-finished-bg: #dcfce7;
+  --status-finished-text: #166534;
+  --status-finished-dot: #16a34a;
+
+  /* Rating */
+  --star: #f59e0b;
+  --star-empty: #d3cfc6;
+
+  /* Typography */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Literata Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-md: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
+
+  /* Spacing (4px scale) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 25, 23, 0.04);
+  --shadow-md: 0 4px 12px rgba(26, 25, 23, 0.06);
+  --shadow-lg: 0 20px 40px rgba(26, 25, 23, 0.15);
+
+  /* Layout */
+  --container: 1120px;
+  --container-narrow: 640px;
+  --page-padding: clamp(1rem, 4vw, 1.5rem);
+  --control-height: 2.5rem; /* 40px */
+  --control-height-sm: 2.25rem; /* 36px */
+  --navbar-height: 3.75rem; /* 60px */
+
+  /* Motion */
+  --transition: 150ms ease;
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
