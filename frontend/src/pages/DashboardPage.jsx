@@ -74,7 +74,7 @@ export function DashboardPage() {
             <div className="stats-grid">
               {loading
                 ? STATS.map((s) => <StatCardSkeleton key={s.key} />)
-                : STATS.map((s) => <StatCard key={s.key} {...s} value={stats[s.key]} />)}
+                : STATS.map(({ key, ...stat }) => <StatCard key={key} {...stat} value={stats[key]} />)}
             </div>
           </section>
 
