@@ -1,0 +1,9 @@
+/* Self-hosted variable fonts (no external requests) */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/literata';
+
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './layout.css';
+@import './pages.css';
