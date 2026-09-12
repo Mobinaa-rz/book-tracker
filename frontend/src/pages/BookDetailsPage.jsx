@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BookX, CalendarDays, Clock, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import { booksApi } from '../api/books.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { useApi } from '../lib/useApi.js';
+import { useApi, useSessionExpiry } from '../lib/useApi.js';
 import { useDocumentTitle } from '../lib/useDocumentTitle.js';
 import { formatDate, timeAgo } from '../lib/format.js';
 import {
@@ -46,6 +46,7 @@ export function BookDetailsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { data: book, error, loading, retry } = useApi(() => booksApi.get(id), [id]);
+  const handleSessionExpiry = useSessionExpiry();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -58,6 +59,7 @@ export function BookDetailsPage() {
       toast.success('Book deleted');
       navigate('/books', { replace: true });
     } catch (err) {
+      if (handleSessionExpiry(err)) return;
       setDeleting(false);
       setConfirmOpen(false);
       toast.error(err.message || 'Could not delete the book');

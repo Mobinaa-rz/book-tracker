@@ -26,6 +26,7 @@ export function ProtectedRoute() {
 /** The opposite: login/register are only for logged-out visitors. */
 export function GuestRoute() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -35,7 +36,9 @@ export function GuestRoute() {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  // Already logged in: go to the page they originally asked for, or the dashboard.
+  // (Uses the same `state.from` as LoginPage so both redirects agree.)
+  if (user) return <Navigate to={location.state?.from || '/'} replace />;
 
   return <Outlet />;
 }

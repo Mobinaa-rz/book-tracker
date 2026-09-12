@@ -258,7 +258,11 @@ describe('DashboardPage', () => {
     renderWithProviders(<DashboardPage />, { route: '/', protectedPage: true });
 
     expect(await screen.findByRole('heading', { name: 'Welcome back, mobina' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Total books: 2. View these books' })).toHaveAttribute('href', '/books');
+    // The heading renders straight away; the stats arrive once the API call resolves.
+    expect(await screen.findByRole('link', { name: 'Total books: 2. View these books' })).toHaveAttribute(
+      'href',
+      '/books',
+    );
     expect(screen.getByRole('link', { name: 'Reading: 1. View these books' })).toHaveAttribute(
       'href',
       '/books?status=reading',

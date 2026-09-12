@@ -3,6 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /**
+ * Returns a function that handles an expired session: if the given error is a
+ * 401, the local user is cleared and the visitor is sent to the login page.
+ * Returns true when the error was handled this way.
+ */
+export function useSessionExpiry() {
+  const navigate = useNavigate();
+  const { clearSession } = useAuth();
+
+  return useCallback(
+    (error) => {
+      if (error?.status !== 401) return false;
+      clearSession();
+      navigate('/login', { replace: true, state: { reason: 'expired' } });
+      return true;
+    },
+    [clearSession, navigate],
+  );
+}
+
+/**
  * Runs an async API call and tracks { data, error, loading, refreshing }.
  * - `deps` re-runs the call (e.g. when search params change)
  * - the first load shows `loading`; later loads show `refreshing` so the
@@ -12,8 +32,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 export function useApi(fetcher, deps = []) {
   const [state, setState] = useState({ data: null, error: null, loading: true, refreshing: false });
   const [attempt, setAttempt] = useState(0);
-  const navigate = useNavigate();
-  const { clearSession } = useAuth();
+  const handleSessionExpiry = useSessionExpiry();
   const latest = useRef(0);
 
   useEffect(() => {
@@ -26,11 +45,7 @@ export function useApi(fetcher, deps = []) {
       })
       .catch((error) => {
         if (id !== latest.current) return;
-        if (error.status === 401) {
-          clearSession();
-          navigate('/login', { replace: true, state: { reason: 'expired' } });
-          return;
-        }
+        if (handleSessionExpiry(error)) return;
         setState((s) => ({ ...s, error, loading: false, refreshing: false }));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps

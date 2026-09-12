@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { STATUSES } from '../../lib/status.js';
+import { useSessionExpiry } from '../../lib/useApi.js';
 import { Button } from '../ui/Button.jsx';
 import { Field, Input, Textarea } from '../ui/Field.jsx';
 import { ChoiceChips } from '../ui/ChoiceChips.jsx';
@@ -32,6 +33,7 @@ export function validateBook(values) {
  */
 export function BookForm({ initialValues, onSubmit, submitLabel, submittingLabel, cancelTo }) {
   const navigate = useNavigate();
+  const handleSessionExpiry = useSessionExpiry();
   const [values, setValues] = useState({ ...EMPTY, ...initialValues });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
@@ -68,6 +70,7 @@ export function BookForm({ initialValues, onSubmit, submitLabel, submittingLabel
         notes: values.notes.trim(),
       });
     } catch (error) {
+      if (handleSessionExpiry(error)) return;
       if (error.details) setErrors(error.details);
       setFormError(error.details ? null : error.message || 'Something went wrong. Please try again.');
       setSaving(false);
