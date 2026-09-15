@@ -2,6 +2,7 @@
   "name": "book-tracker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Book Tracker - a full-stack app to manage your personal book collection",
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend",
@@ -11,10 +12,17 @@
     "test": "npm test --prefix backend && npm test --prefix frontend",
     "test:backend": "npm test --prefix backend",
     "test:frontend": "npm test --prefix frontend",
+    "test:e2e": "node e2e/reset-db.js && playwright test",
+    "test:e2e:headed": "node e2e/reset-db.js && playwright test --headed",
+    "test:e2e:ui": "node e2e/reset-db.js && playwright test --ui",
+    "test:e2e:debug": "node e2e/reset-db.js && playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:all": "npm test && npm run test:e2e",
     "build": "npm run build --prefix frontend",
     "start": "npm start --prefix backend"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "concurrently": "^10.0.5"
   }
 }
