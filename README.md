@@ -70,6 +70,18 @@ book-tracker/
 │       ├── pages/           Login, Register, Dashboard, Books, AddBook, EditBook, BookDetails
 │       ├── styles/          tokens, base, components, layout, pages (plain CSS)
 │       └── __tests__/       Vitest + React Testing Library tests
+├── e2e/                     Playwright end-to-end tests (real browser, real stack)
+│   ├── auth.spec.js         register, login, logout, session, route guards
+│   ├── books.spec.js        add / edit / delete, search, status filters, details
+│   ├── dashboard.spec.js    summary stat cards and "Recently added"
+│   ├── navigation.spec.js   navbar, client-side routing, 404 page
+│   ├── ownership.spec.js    per-user data isolation
+│   ├── fixtures.js          `test` (logged out) and `authedTest` (signed in)
+│   ├── helpers.js           API seeding, UI helpers, form locators
+│   ├── paths.js             ports, URLs and the e2e database location
+│   ├── browser-source.js    picks the Chromium binary to drive
+│   └── reset-db.js          wipes the e2e database before a run
+├── playwright.config.js     Playwright config (starts both servers itself)
 ├── package.json             convenience scripts that run both apps
 ├── .gitignore
 └── README.md
@@ -90,6 +102,16 @@ book-tracker/
 npm run install:all        # installs backend/ and frontend/ dependencies
 npm install                # (optional) installs `concurrently` for `npm run dev`
 ```
+
+To run the end-to-end suite as well, add the browser once:
+
+```bash
+npx playwright install chromium
+```
+
+(`npm install` already pulls in `@playwright/test`; only the browser download
+is separate. See [Restricted networks](#running-the-tests) if that download is
+blocked.)
 
 ### 2. Configure the backend
 
@@ -139,9 +161,11 @@ Then open <http://localhost:4000>.
 ## Running the tests
 
 ```bash
-npm test                 # backend + frontend
+npm test                 # backend + frontend unit/integration tests
 npm run test:backend     # API tests (Vitest + Supertest, in-memory SQLite)
 npm run test:frontend    # component/page tests (Vitest + React Testing Library)
+npm run test:e2e         # end-to-end tests (Playwright, real browser)
+npm run test:all         # everything above, in that order
 ```
 
 **Backend (41 tests)** cover registration, login, logout, `/me`, auth
@@ -154,6 +178,81 @@ success, server errors), route guards, the My Books page (loading skeleton,
 URL-synced search/filter, empty / no-results / error states), the add and edit
 forms (payloads, server field errors), the details page (delete only after
 confirmation), the dashboard, the navbar and the reusable UI components.
+
+### End-to-end tests (Playwright)
+
+**E2E (62 tests)** run a real Chromium against the real stack — the actual
+Express + SQLite API and the actual Vite dev server — with nothing mocked.
+`playwright.config.js` starts both servers itself, waits for them to be ready
+and shuts them down afterwards, so one command is enough.
+
+They cover the journeys the other suites can only approximate:
+
+| Spec                 | What it covers                                                                 |
+|----------------------|--------------------------------------------------------------------------------|
+| `auth.spec.js`       | Registering and logging in through the real forms, client- and server-side validation errors, logout, the session surviving a reload (httpOnly cookie), and both route guards including the redirect back to the page a guest originally asked for |
+| `books.spec.js`      | Adding a book end to end, required-field validation, status chips and the star rating picker, the My Books grid, debounced search by title and author, clearing search, status filtering, search + filter combined, the no-results state, URL state surviving a reload, editing (prefill, save, persistence), cancelling an edit, and deleting with — and cancelling — the confirmation dialog |
+| `dashboard.spec.js`  | Per-status counts, stat cards deep-linking to filtered views, the "Recently added" list and its five-book cap, and the empty-library state |
+| `navigation.spec.js` | The navbar, client-side routing between pages, the active-link state, the brand link, and the 404 page |
+| `ownership.spec.js`  | Per-user isolation as a real user experiences it: another account's books are absent from the list, and opening, editing, updating or deleting one by id yields a `404` |
+
+Useful variations:
+
+```bash
+npm run test:e2e:headed   # watch the browser
+npm run test:e2e:ui       # Playwright's interactive UI mode
+npm run test:e2e:debug    # step through with the inspector
+npm run test:e2e:report   # open the last HTML report
+npx playwright test e2e/books.spec.js -g "deleting"   # one file / one test
+```
+
+#### Before the first e2e run
+
+```bash
+npm install                        # installs @playwright/test
+npx playwright install chromium    # downloads the browser (one-off)
+```
+
+The suite uses its own database at `backend/data/e2e.db`, wiped before every
+run, and never touches `backend/data/books.db`. Each test also registers its
+own unique account, so tests are fully isolated from one another and can run in
+parallel.
+
+<details>
+<summary><strong>Restricted networks</strong> (when <code>npx playwright install</code> cannot reach the browser CDN)</summary>
+
+Playwright downloads browsers from a CDN that some sandboxes and corporate
+networks block. When that happens, install a Chromium build published to the
+npm registry instead — the npm registry is usually still reachable:
+
+```bash
+npm install --no-save @sparticuz/chromium
+```
+
+`e2e/browser-source.js` then picks it up automatically; the run prints which
+browser it chose:
+
+```
+[playwright] chromium source: @sparticuz/chromium (npm fallback)
+```
+
+The fallback is **optional and not a project dependency** — normal installs
+should just use `npx playwright install chromium`. Resolution order is:
+
+1. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` (an explicit browser path), then
+2. Playwright's own downloaded browser, then
+3. `@sparticuz/chromium`, if it happens to be installed.
+
+On slim Linux images that build may also need the NSS/NSPR libraries. The
+fallback unpacks the copies bundled with that package into
+`node_modules/.cache/book-tracker-e2e/` and points `LD_LIBRARY_PATH` at them
+for the browser process only — no system file is modified.
+
+Video recording is deliberately left off: it needs a separate `ffmpeg`
+download. Traces (enabled on failure) give more useful debugging detail and
+need nothing extra — inspect one with
+`npx playwright show-trace test-results/<test>/trace.zip`.
+</details>
 
 ---
 
@@ -434,5 +533,11 @@ Run from the repository root:
 | `npm test`              | Run backend and frontend tests                      |
 | `npm run test:backend`  | Backend tests only                                  |
 | `npm run test:frontend` | Frontend tests only                                 |
+| `npm run test:e2e`      | Playwright end-to-end tests (starts both servers)   |
+| `npm run test:e2e:headed` | End-to-end tests with a visible browser           |
+| `npm run test:e2e:ui`   | End-to-end tests in Playwright's UI mode            |
+| `npm run test:e2e:debug`| End-to-end tests with the step-through inspector    |
+| `npm run test:e2e:report` | Open the last HTML report                         |
+| `npm run test:all`      | Unit/integration tests, then end-to-end tests       |
 | `npm run build`         | Production build of the frontend into `frontend/dist` |
 | `npm start`             | Start the API in production mode (serves `dist/`)   |
