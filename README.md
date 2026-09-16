@@ -657,3 +657,11 @@ Run from the repository root:
 | `npm run test:all`      | Unit/integration tests, then end-to-end tests       |
 | `npm run build`         | Production build of the frontend into `frontend/dist` |
 | `npm start`             | Start the API in production mode (serves `dist/`)   |
+### Demo account
+
+For reviewing the application without creating a new account:
+
+- Email: demo@example.com
+- Password: Demo-Password-123
+
+The demo account can be used to explore the dashboard, books, reading statuses, ratings, and calendar.
