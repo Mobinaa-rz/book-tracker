@@ -13,6 +13,21 @@ export function formatDate(isoString) {
   return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
 }
 
+/**
+ * "10 Mar 2026" for a date-only 'YYYY-MM-DD' string (the calendar columns).
+ *
+ * The parts are parsed by hand instead of using `new Date(key)`: a date-only
+ * ISO string is defined as *UTC* midnight, so formatting it through a local
+ * timezone would print the previous day anywhere west of Greenwich. Building a
+ * local date from the year, month and day keeps 10 March on 10 March.
+ */
+export function formatDateOnly(key) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key ?? '');
+  if (!match) return '';
+  const [, year, month, day] = match;
+  return dateFormatter.format(new Date(Number(year), Number(month) - 1, Number(day)));
+}
+
 /** "today", "yesterday", "3 days ago", "2 months ago"... */
 export function timeAgo(isoString, now = new Date()) {
   if (!isoString) return '';

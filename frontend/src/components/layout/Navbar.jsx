@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Library, LogOut, Plus } from 'lucide-react';
+import { CalendarDays, LayoutDashboard, Library, LogOut, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { Button } from '../ui/Button.jsx';
@@ -9,6 +9,7 @@ import { Brand } from './Brand.jsx';
 const LINKS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/books', label: 'My Books', icon: Library, end: true },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/books/new', label: 'Add Book', icon: Plus },
 ];
 

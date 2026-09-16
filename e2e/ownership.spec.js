@@ -81,4 +81,17 @@ test.describe('data isolation between accounts', () => {
     await expect(page.getByRole('link', { name: 'Total books: 0. View these books' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Reading: 0. View these books' })).toBeVisible();
   });
+
+  test("another user's reading dates stay off my calendar", async ({ page }) => {
+    const foreignBook = await createForeignBook();
+
+    // The seeded book is `reading`, so the API stamped today's date on it: it
+    // would be sitting on its owner's calendar right now.
+    await page.goto('/calendar');
+    await waitForAppReady(page);
+
+    await expect(page.getByRole('table')).toBeVisible();
+    await expect(page.getByRole('link', { name: `Started ${foreignBook.title}` })).toHaveCount(0);
+    await expect(page.getByText(foreignBook.title)).toHaveCount(0);
+  });
 });

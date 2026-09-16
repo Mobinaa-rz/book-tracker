@@ -352,6 +352,19 @@ a.book-card:hover {
   gap: var(--space-5);
 }
 
+/* Two related short fields - the calendar dates - share a row when there is
+   room for one, and stack on narrow screens. */
+.form-row {
+  display: grid;
+  gap: var(--space-5);
+}
+
+@media (min-width: 640px) {
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

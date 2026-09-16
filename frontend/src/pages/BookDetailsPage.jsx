@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BookX, CalendarDays, Clock, Pencil, StickyNote, Trash2 } from 'lucide-react';
+import { BookCheck, BookOpen, BookX, CalendarDays, Clock, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import { booksApi } from '../api/books.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useApi, useSessionExpiry } from '../lib/useApi.js';
 import { useDocumentTitle } from '../lib/useDocumentTitle.js';
-import { formatDate, timeAgo } from '../lib/format.js';
+import { formatDate, formatDateOnly, timeAgo } from '../lib/format.js';
 import {
   Alert,
   Button,
@@ -126,6 +126,21 @@ export function BookDetailsPage() {
               </div>
 
               <div className="detail__dates">
+                {/* The reader's own dates come first: they are what the
+                    calendar is built from, and the more interesting answer to
+                    "when did I read this?" than when the row was inserted. */}
+                {book.start_date && (
+                  <span>
+                    <BookOpen aria-hidden="true" />
+                    Started {formatDateOnly(book.start_date)}
+                  </span>
+                )}
+                {book.finished_date && (
+                  <span>
+                    <BookCheck aria-hidden="true" />
+                    Finished {formatDateOnly(book.finished_date)}
+                  </span>
+                )}
                 <span>
                   <CalendarDays aria-hidden="true" />
                   Added {formatDate(book.created_at)}

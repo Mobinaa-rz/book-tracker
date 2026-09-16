@@ -135,6 +135,9 @@ describe('AddBookPage', () => {
       status: 'finished',
       rating: 4,
       notes: 'Loved it.',
+      // No dates were typed, so both are sent explicitly as null.
+      start_date: null,
+      finished_date: null,
     });
     expect(screen.getByRole('status')).toHaveTextContent('Book added');
   });
@@ -184,6 +187,10 @@ describe('EditBookPage', () => {
     expect(screen.getByLabelText(/Author/)).toHaveValue('Frank Herbert');
     expect(screen.getByRole('radio', { name: /Reading/ })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '4');
+    // A date the API sent as null must land as an empty string, or React would
+    // treat the input as uncontrolled and warn when it is typed into.
+    expect(screen.getByLabelText('Started')).toHaveValue('2026-03-10');
+    expect(screen.getByLabelText('Finished')).toHaveValue('');
 
     await userEvent.clear(title);
     await userEvent.type(title, 'Dune Messiah');
@@ -196,6 +203,10 @@ describe('EditBookPage', () => {
       status: 'reading',
       rating: 4,
       notes: 'Great world-building.',
+      // The stored dates come back round: PUT is a full update, so a form that
+      // omitted them would clear them on every save.
+      start_date: '2026-03-10',
+      finished_date: null,
     });
     expect(screen.getByRole('status')).toHaveTextContent('Changes saved');
   });
@@ -218,6 +229,10 @@ describe('BookDetailsPage', () => {
     expect(screen.getByText('Reading')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Rated 4 out of 5' })).toBeInTheDocument();
     expect(screen.getByText('Great world-building.')).toBeInTheDocument();
+    // The reader's own date, rendered from the date-only string without a
+    // timezone shift, and ahead of the "added" timestamp.
+    expect(screen.getByText('Started 10 Mar 2026')).toBeInTheDocument();
+    expect(screen.queryByText(/Finished \d/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Edit/ })).toHaveAttribute('href', '/books/1/edit');
   });
 

@@ -6,7 +6,7 @@ import { authedTest as test, expect } from './fixtures.js';
 import { backLink, waitForAppReady } from './helpers.js';
 
 test.describe('navbar', () => {
-  test('shows the signed-in user and the three main links', async ({ page, account }) => {
+  test('shows the signed-in user and the four main links', async ({ page, account }) => {
     await page.goto('/');
     await waitForAppReady(page);
 
@@ -14,6 +14,7 @@ test.describe('navbar', () => {
     await expect(nav).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'My Books' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Calendar' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Add Book' })).toBeVisible();
     await expect(page.getByText(account.username).first()).toBeVisible();
   });
@@ -27,6 +28,10 @@ test.describe('navbar', () => {
     await nav.getByRole('link', { name: 'My Books' }).click();
     await expect(page).toHaveURL(/\/books$/);
     await expect(page.getByRole('heading', { name: 'My Books' })).toBeVisible();
+
+    await nav.getByRole('link', { name: 'Calendar' }).click();
+    await expect(page).toHaveURL(/\/calendar$/);
+    await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
 
     await nav.getByRole('link', { name: 'Add Book' }).click();
     await expect(page).toHaveURL(/\/books\/new$/);

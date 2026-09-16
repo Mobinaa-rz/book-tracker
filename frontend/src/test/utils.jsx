@@ -23,6 +23,9 @@ export const sampleBooks = [
     notes: 'Great world-building.',
     created_at: '2026-03-10T10:00:00.000Z',
     updated_at: '2026-03-10T10:00:00.000Z',
+    // Calendar dates: 'YYYY-MM-DD' strings, null when not set.
+    start_date: '2026-03-10',
+    finished_date: null,
   },
   {
     id: 2,
@@ -34,6 +37,8 @@ export const sampleBooks = [
     notes: '',
     created_at: '2026-03-12T10:00:00.000Z',
     updated_at: '2026-03-12T10:00:00.000Z',
+    start_date: '2026-02-28',
+    finished_date: '2026-03-12',
   },
 ];
 

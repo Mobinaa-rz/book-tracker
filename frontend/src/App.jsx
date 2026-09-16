@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import { DashboardPage } from './pages/DashboardPage.jsx';
 import { BooksPage } from './pages/BooksPage.jsx';
+import { CalendarPage } from './pages/CalendarPage.jsx';
 import { AddBookPage } from './pages/AddBookPage.jsx';
 import { EditBookPage } from './pages/EditBookPage.jsx';
 import { BookDetailsPage } from './pages/BookDetailsPage.jsx';
@@ -27,6 +28,7 @@ export function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/books" element={<BooksPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/books/new" element={<AddBookPage />} />
           <Route path="/books/:id" element={<BookDetailsPage />} />
           <Route path="/books/:id/edit" element={<EditBookPage />} />

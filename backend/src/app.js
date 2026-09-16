@@ -6,10 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { openDatabase } from './db/index.js';
 import { createUserModel } from './models/users.js';
 import { createBookModel } from './models/books.js';
+import { createCalendarModel } from './models/calendar.js';
 import { createRequireAuth } from './middleware/requireAuth.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { createAuthRouter } from './routes/auth.routes.js';
 import { createBooksRouter } from './routes/books.routes.js';
+import { createCalendarRouter } from './routes/calendar.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +24,7 @@ export function createApp({ dbPath } = {}) {
   const db = openDatabase(dbPath);
   const users = createUserModel(db);
   const books = createBookModel(db);
+  const calendar = createCalendarModel(db);
   const requireAuth = createRequireAuth(users);
 
   const app = express();
@@ -33,6 +36,7 @@ export function createApp({ dbPath } = {}) {
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/auth', createAuthRouter({ users, requireAuth }));
   app.use('/api/books', createBooksRouter({ books, requireAuth }));
+  app.use('/api/calendar', createCalendarRouter({ calendar, requireAuth }));
   app.use('/api', notFound);
 
   // In production, serve the built frontend (frontend/dist) if it exists.

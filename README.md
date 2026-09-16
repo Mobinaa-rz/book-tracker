@@ -2,7 +2,8 @@
 
 A full-stack web application for keeping track of your personal book collection.
 Create an account, add the books you want to read, are reading or have finished,
-rate them, keep notes, and see a summary of your library on the dashboard.
+rate them, keep notes, see a summary of your library on the dashboard, and follow
+*when* you read it all on a month-by-month calendar.
 Every user only ever sees and manages their own books.
 
 **Stack:** Node.js 22 · Express 5 · SQLite (better-sqlite3) · React 19 · Vite · plain CSS
@@ -30,6 +31,12 @@ Every user only ever sees and manages their own books.
 - **Books** – add, view, edit and delete books with title, author, status,
   1–5 star rating, personal notes and date added
 - **Statuses** – *Want to Read*, *Reading*, *Finished*
+- **Reading dates** – every book can carry the date it was started and the date
+  it was finished. Changing the status fills the matching date in for you
+  (and never overwrites a date you set yourself)
+- **Calendar** – a month view of everything you started and finished, with a
+  per-day detail panel. The month and the chosen day live in the URL, so any
+  view can be linked, refreshed or stepped back through
 - **Dashboard** – totals per status and the most recently added books
 - **Search & filter** – search by title or author, filter by status
   (only ever within your own books)
@@ -49,30 +56,32 @@ book-tracker/
 │   │   ├── app.js           builds the Express app (used by server + tests)
 │   │   ├── server.js        starts the HTTP server
 │   │   ├── config.js        environment configuration
-│   │   ├── db/              database connection + schema.sql
-│   │   ├── models/          SQL queries for users and books
+│   │   ├── db/              database connection + schema.sql + migrations.js
+│   │   ├── models/          SQL queries for users, books and the calendar
 │   │   ├── middleware/      requireAuth, validate, errorHandler
-│   │   ├── routes/          auth.routes.js, books.routes.js
+│   │   ├── routes/          auth.routes.js, books.routes.js, calendar.routes.js
 │   │   ├── validators/      zod schemas for request bodies / queries
-│   │   └── utils/           HttpError, JWT + cookie helpers
-│   ├── tests/               Vitest + Supertest API tests
+│   │   └── utils/           HttpError, JWT + cookie helpers, date helpers
+│   ├── tests/               Vitest + Supertest API tests (incl. calendar, migrations)
 │   ├── data/                SQLite database file (git-ignored)
 │   └── .env.example
 ├── frontend/                React single-page app (Vite)
 │   └── src/
-│       ├── api/             fetch wrapper + auth/books API modules
+│       ├── api/             fetch wrapper + auth/books/calendar API modules
 │       ├── components/
 │       │   ├── ui/          Button, Field, ChoiceChips, StatusBadge, StarRating, …
 │       │   ├── books/       BookCard, BookCover, BookForm, BookListItem
+│       │   ├── calendar/    month grid, day cell, toolbar, legend, day panel
 │       │   └── layout/      Navbar, AppLayout, AuthLayout, ProtectedRoute
 │       ├── context/         AuthContext, ToastContext
-│       ├── lib/             status metadata, formatting, cover colours, hooks
-│       ├── pages/           Login, Register, Dashboard, Books, AddBook, EditBook, BookDetails
-│       ├── styles/          tokens, base, components, layout, pages (plain CSS)
+│       ├── lib/             status metadata, formatting, calendar maths, hooks
+│       ├── pages/           Login, Register, Dashboard, Books, Calendar, AddBook, EditBook, BookDetails
+│       ├── styles/          tokens, base, components, layout, pages, calendar (plain CSS)
 │       └── __tests__/       Vitest + React Testing Library tests
 ├── e2e/                     Playwright end-to-end tests (real browser, real stack)
 │   ├── auth.spec.js         register, login, logout, session, route guards
 │   ├── books.spec.js        add / edit / delete, search, status filters, details
+│   ├── calendar.spec.js     month grid, reading dates, status → date stamping
 │   ├── dashboard.spec.js    summary stat cards and "Recently added"
 │   ├── navigation.spec.js   navbar, client-side routing, 404 page
 │   ├── ownership.spec.js    per-user data isolation
@@ -129,7 +138,10 @@ Open `backend/.env` and set a real `JWT_SECRET` (any long random string, e.g.
 | `DB_PATH`    | `data/books.db`  | SQLite file (relative to `backend/`) or `:memory:` |
 | `NODE_ENV`   | `development`    | `production` marks the cookie as `Secure`          |
 
-The database file and tables are created automatically on first start.
+The database file and tables are created automatically on first start, and any
+pending migrations are applied at the same time — so an existing `books.db` from
+an earlier version simply gains the new calendar columns and keeps its rows.
+See [Database](#database).
 
 ### 3. Run the app
 
@@ -168,20 +180,30 @@ npm run test:e2e         # end-to-end tests (Playwright, real browser)
 npm run test:all         # everything above, in that order
 ```
 
-**Backend (41 tests)** cover registration, login, logout, `/me`, auth
+**Backend (76 tests)** cover registration, login, logout, `/me`, auth
 protection of every book endpoint, book create/read/update/delete, validation
 errors, search & status filtering, dashboard stats and — most importantly —
 that a user gets `404` when trying to read, update or delete another user's book.
+Calendar-specific coverage includes the reading-date fields (validation, the
+`finished_date >= start_date` rule, clearing a date), the status → date
+auto-stamping rule and the fact that it never overwrites a date you set, the
+`GET /api/calendar` aggregation (grouping, ordering, books with both dates,
+range boundaries, ownership isolation) and its error cases, plus the
+idempotency of the database migration itself.
 
-**Frontend (46 tests)** cover the login and register flows (validation,
+**Frontend (79 tests)** cover the login and register flows (validation,
 success, server errors), route guards, the My Books page (loading skeleton,
 URL-synced search/filter, empty / no-results / error states), the add and edit
-forms (payloads, server field errors), the details page (delete only after
-confirmation), the dashboard, the navbar and the reusable UI components.
+forms (payloads, server field errors, the reading-date inputs), the details
+page (delete only after confirmation, the dates line), the dashboard, the
+navbar and the reusable UI components — plus the calendar: the month grid
+(weekday layout, outside-month days, today, event chips and the "+N more"
+cap), month navigation, day selection and the side panel, URL sync, the legend
+and the empty / error / loading states.
 
 ### End-to-end tests (Playwright)
 
-**E2E (62 tests)** run a real Chromium against the real stack — the actual
+**E2E (78 tests)** run a real Chromium against the real stack — the actual
 Express + SQLite API and the actual Vite dev server — with nothing mocked.
 `playwright.config.js` starts both servers itself, waits for them to be ready
 and shuts them down afterwards, so one command is enough.
@@ -192,9 +214,10 @@ They cover the journeys the other suites can only approximate:
 |----------------------|--------------------------------------------------------------------------------|
 | `auth.spec.js`       | Registering and logging in through the real forms, client- and server-side validation errors, logout, the session surviving a reload (httpOnly cookie), and both route guards including the redirect back to the page a guest originally asked for |
 | `books.spec.js`      | Adding a book end to end, required-field validation, status chips and the star rating picker, the My Books grid, debounced search by title and author, clearing search, status filtering, search + filter combined, the no-results state, URL state surviving a reload, editing (prefill, save, persistence), cancelling an edit, and deleting with — and cancelling — the confirmation dialog |
+| `calendar.spec.js`   | The month grid rendering seeded events, selecting a day and reading the panel, stepping between months and jumping to today, navigating from an event to the book, dates surviving a page reload via the URL, setting and clearing dates in the form, the status → date auto-stamp as a real user sees it, and a month with nothing to show |
 | `dashboard.spec.js`  | Per-status counts, stat cards deep-linking to filtered views, the "Recently added" list and its five-book cap, and the empty-library state |
-| `navigation.spec.js` | The navbar, client-side routing between pages, the active-link state, the brand link, and the 404 page |
-| `ownership.spec.js`  | Per-user isolation as a real user experiences it: another account's books are absent from the list, and opening, editing, updating or deleting one by id yields a `404` |
+| `navigation.spec.js` | The navbar, client-side routing between pages (including the calendar), the active-link state, the brand link, and the 404 page |
+| `ownership.spec.js`  | Per-user isolation as a real user experiences it: another account's books are absent from the list and from the calendar, and opening, editing, updating or deleting one by id yields a `404` |
 
 Useful variations:
 
@@ -271,6 +294,12 @@ Browser ──► Vite dev server (5173) ──/api/*──► Express API (4000
 - **Every book query takes the user id** (`WHERE id = ? AND user_id = ?`).
   Ownership is therefore enforced in one place and cannot be forgotten in a
   route.
+- **Calendar events are derived, not stored.** They come straight from each
+  book's `start_date` / `finished_date`, so there is no second copy of the data
+  to fall out of sync and no migration path to maintain when a book changes.
+  The endpoint sits in its own router (mounted at `/api/calendar`) rather than
+  under `/api/books`, whose `:id` parameter handler would otherwise swallow the
+  word "calendar" as an id.
 - **Validation** is done with `zod` schemas; a failed validation returns
   `400` with one message per field, which the frontend shows inline.
 - **The frontend keeps state simple:** an `AuthContext` for the logged-in
@@ -318,19 +347,41 @@ on start-up. Timestamps are ISO-8601 UTC strings.
 
 **books**
 
-| column       | type    | notes                                              |
-|--------------|---------|----------------------------------------------------|
-| `id`         | INTEGER | primary key                                        |
-| `user_id`    | INTEGER | FK → users.id, `ON DELETE CASCADE`, indexed        |
-| `title`      | TEXT    | required                                           |
-| `author`     | TEXT    | required                                           |
-| `status`     | TEXT    | `want_to_read` (default) · `reading` · `finished`  |
-| `rating`     | INTEGER | `NULL` or 1–5                                      |
-| `notes`      | TEXT    | default `''`                                       |
-| `created_at` | TEXT    | default: now                                       |
-| `updated_at` | TEXT    | set on every update                                |
+| column            | type      | notes                                              |
+|-------------------|-----------|----------------------------------------------------|
+| `id`              | INTEGER   | primary key                                        |
+| `user_id`         | INTEGER   | FK → users.id, `ON DELETE CASCADE`, indexed        |
+| `title`           | TEXT      | required                                           |
+| `author`          | TEXT      | required                                           |
+| `status`          | TEXT      | `want_to_read` (default) · `reading` · `finished`  |
+| `rating`          | INTEGER   | `NULL` or 1–5                                      |
+| `notes`           | TEXT      | default `''`                                       |
+| `created_at`      | TEXT      | default: now                                       |
+| `updated_at`      | TEXT      | set on every update                                |
+| `start_date`      | TEXT      | `NULL` or `'YYYY-MM-DD'` — when reading began      |
+| `finished_date`   | TEXT      | `NULL` or `'YYYY-MM-DD'` — when reading ended      |
 
 A book belongs to exactly one user.
+
+Dates are stored *date-only* — never a timestamp — so "finished on 12 March"
+stays on 12 March for a reader in any timezone, and a range query is a plain
+text comparison. A `CHECK` keeps the `YYYY-MM-DD` shape honest even for a write
+that bypasses the API.
+
+**How the dates get filled in.** When a book's status *changes* to `reading`,
+an empty `start_date` becomes today; when it changes to `finished`, an empty
+`finished_date` becomes today. A date you set yourself is never overwritten or
+cleared by this rule, and editing anything else leaves the dates alone. The rule
+lives in `models/books.js`, so every API client gets the same behaviour.
+
+**Migrations.** `schema.sql` uses `CREATE TABLE IF NOT EXISTS`, which creates
+missing tables but never reshapes one that already exists, so on its own it
+could never add a column to an existing `books.db`. On start-up the app
+therefore also runs
+[`migrations.js`](backend/src/db/migrations.js): small, idempotent steps that
+inspect the database and add only what is missing. An old database gains the
+calendar columns and keeps its rows; a fresh one is untouched. Re-running is
+always a no-op.
 
 ---
 
@@ -406,15 +457,25 @@ A book object looks like:
   "rating": 4,
   "notes": "Slow start, great world-building.",
   "created_at": "2026-03-10T10:00:00.000Z",
-  "updated_at": "2026-03-10T10:00:00.000Z"
+  "updated_at": "2026-03-10T10:00:00.000Z",
+  "start_date": "2026-03-10",
+  "finished_date": null
 }
 ```
 
 Body rules for create/update: `title` and `author` required (1–200 chars,
 trimmed); `status` one of `want_to_read | reading | finished` (default
 `want_to_read`); `rating` integer 1–5 or `null` (default `null`); `notes` up to
-2000 characters (default `""`). `user_id` is always taken from the session and
+2000 characters (default `""`); `start_date` and `finished_date` optional
+`'YYYY-MM-DD'` strings or `null` (default `null`, with `finished_date` required
+to be on or after `start_date`). `user_id` is always taken from the session and
 cannot be set by the client.
+
+`PUT /api/books/:id` is a **full update**: a field left out of the body takes
+its default rather than keeping the stored value, so a client must send the
+whole book — including both dates — or they are cleared. That is the same rule
+`rating` and `notes` have always followed, and the web form always sends the
+complete object.
 
 #### `GET /api/books` 🔒
 
@@ -471,6 +532,52 @@ Full update; same body as create. Sets `updated_at`.
 
 `204 No Content`, or `404`.
 
+### Calendar
+
+#### `GET /api/calendar?from=&to=` 🔒
+
+Everything that happened in a date range, already grouped by day, so a client
+does not have to download every book and do the maths itself.
+
+Query parameters:
+
+| parameter | type | notes |
+|-----------|------|-------|
+| `from` | string | required, `'YYYY-MM-DD'`, start of the range |
+| `to`   | string | required, `'YYYY-MM-DD'`, end of the range (inclusive), at most 366 days after `from` |
+
+Response `200`:
+
+```json
+{
+  "events": [
+    {
+      "date": "2026-03-10",
+      "kind": "started",
+      "book": { "id": 1, "title": "Dune", "author": "Frank Herbert", "status": "finished", "rating": 4 }
+    },
+    {
+      "date": "2026-03-18",
+      "kind": "finished",
+      "book": { "id": 1, "title": "Dune", "author": "Frank Herbert", "status": "finished", "rating": 4 }
+    }
+  ],
+  "summary": { "total_events": 2, "days_with_events": 2 }
+}
+```
+
+Events are ordered by date, then `finished` before `started` on the same day.
+A book started and finished inside the range produces two events. Only dates
+that fall within `from`–`to` are returned, so the response shape does not
+change as the range moves.
+
+Errors: `400` missing or malformed date, `to` before `from`, or a range longer
+than 366 days; `401` not signed in.
+
+This is an *aggregated read* rather than a stored events table, which keeps one
+source of truth (the book) while leaving room for a richer reading log later:
+the response shape would not need to change.
+
 ### Health
 
 `GET /api/health` → `200 { "status": "ok" }`
@@ -504,19 +611,28 @@ and colour used *semantically* for status and rating.
 - **States** – every data-driven page has a designed loading skeleton, an
   error state with "Try again", and an empty state with a next step
   ("Add your first book", "Clear filters").
+- **Calendar** – a real `<table>` grid (weeks start Monday, matching the rest of
+  the app's en-GB formatting): days outside the month are dimmed and inert,
+  days with events show colour-coded chips with the book title, today gets a
+  ring, and a cell caps at two events before "+N more". Selecting a day opens a
+  side panel listing that day's books, each linking straight to its details.
+  The month and selected day are reflected in the URL — e.g.
+  `/calendar?month=2026-03&day=2026-03-10` — so refreshing or sharing keeps
+  your place.
 - **Responsive** – mobile-first CSS with breakpoints at 640 / 768 / 900 /
   1024 px: stat cards go 2×2 → 4 across, the book grid 1 → 2 → 3 columns, the
-  navbar wraps to two rows on small screens, and the login/register page gains
-  a side panel on large screens.
+  navbar wraps to two rows on small screens, the calendar panel stacks under the
+  grid, and the login/register page gains a side panel on large screens.
 - **Accessibility** – semantic landmarks, visible focus rings, labelled form
   fields with `aria-invalid`/`aria-describedby`, a `radiogroup` for chips, a
-  `slider` for the rating input, `aria-current` on the active nav link and
+  `slider` for the rating input, `aria-current` on the active nav link,
+  `aria-pressed` day buttons with descriptive accessible names, and
   `prefers-reduced-motion` support.
 
-Pages: `/login`, `/register`, `/` (dashboard), `/books`, `/books/new`,
-`/books/:id`, `/books/:id/edit`. Logged-out visitors are redirected to
-`/login` (and returned to the page they wanted after logging in); logged-in
-users visiting `/login` or `/register` are sent to the dashboard.
+Pages: `/login`, `/register`, `/` (dashboard), `/books`, `/calendar`,
+`/books/new`, `/books/:id`, `/books/:id/edit`. Logged-out visitors are
+redirected to `/login` (and returned to the page they wanted after logging in);
+logged-in users visiting `/login` or `/register` are sent to the dashboard.
 
 ---
 
