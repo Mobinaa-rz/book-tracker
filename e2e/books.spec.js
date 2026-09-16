@@ -14,6 +14,7 @@ import {
   openDeleteDialog,
   pageTitle,
   sampleBook,
+  statusBadge,
   waitForAppReady,
 } from './helpers.js';
 
@@ -74,7 +75,7 @@ test.describe('adding a book', () => {
     await expect(page.getByText(sampleBook.notes)).toBeVisible();
 
     // The form's default status is "Want to Read" and no rating was picked.
-    await expect(page.getByText('Want to Read')).toBeVisible();
+    await expect(statusBadge(page, 'Want to Read')).toBeVisible();
     await expect(page.getByText('Not rated')).toBeVisible();
 
     // And the book is really in the library, not just on screen.
@@ -122,7 +123,7 @@ test.describe('adding a book', () => {
     await page.getByRole('button', { name: 'Add book' }).click();
 
     await expect(page).toHaveURL(/\/books\/\d+$/);
-    await expect(page.getByText('Finished')).toBeVisible();
+    await expect(statusBadge(page, 'Finished')).toBeVisible();
     await expect(page.getByRole('img', { name: 'Rated 5 out of 5' })).toBeVisible();
   });
 
@@ -351,7 +352,7 @@ test.describe('editing a book', () => {
     await expectToast(page, 'Changes saved');
     await expect(page).toHaveURL(new RegExp(`/books/${book.id}$`));
     await expect(pageTitle(page, 'Dune Messiah')).toBeVisible();
-    await expect(page.getByText('Finished')).toBeVisible();
+    await expect(statusBadge(page, 'Finished')).toBeVisible();
     await expect(page.getByRole('img', { name: 'Rated 3 out of 5' })).toBeVisible();
 
     // Still saved after a hard reload, so it really reached the database.

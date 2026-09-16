@@ -82,7 +82,51 @@ export const fields = {
   author: (page) => page.getByLabel(/^Author/),
   notes: (page) => page.getByLabel(/^Notes/),
   search: (page) => page.getByLabel(/^Search by title or author$/),
+  // The two calendar dates. Anchored because "Finished" is also the label of a
+  // status chip, and a loose match would be ambiguous.
+  started: (page) => page.getByLabel(/^Started$/),
+  finished: (page) => page.getByLabel(/^Finished$/),
 };
+
+/**
+ * Dates for the calendar specs.
+ *
+ * The suite runs against the real clock and the real browser timezone, so these
+ * anchor to whatever "now" is instead of a hard-coded month - a spec written
+ * against September 2026 would silently test nothing a year later. The browser
+ * Playwright drives inherits this process's timezone, so both sides agree on
+ * what today is.
+ */
+export function currentMonthKey(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** A 'YYYY-MM-DD' date inside the current month. */
+export function dayOfCurrentMonth(day, now = new Date()) {
+  return `${currentMonthKey(now)}-${String(day).padStart(2, '0')}`;
+}
+
+/** Today, as the 'YYYY-MM-DD' date the calendar stores. */
+export function todayKey(now = new Date()) {
+  return dayOfCurrentMonth(now.getDate(), now);
+}
+
+/** How the calendar toolbar names the current month, e.g. "September 2026". */
+export function currentMonthLabel(now = new Date()) {
+  return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(now);
+}
+
+/**
+ * Formats a 'YYYY-MM-DD' date the way the book details page shows it
+ * ("15 Sep 2026"). Built from the parts, never from `new Date(key)`, which
+ * would read the string as UTC and show the previous day west of Greenwich.
+ */
+export function longDate(key) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+    new Date(year, month - 1, day),
+  );
+}
 
 /** Fills the login form and submits it. */
 export async function loginThroughUi(page, { email, password }) {
@@ -113,6 +157,8 @@ export async function fillBookForm(page, values) {
   if (values.notes !== undefined) await fields.notes(page).fill(values.notes);
   if (values.status !== undefined) await pickStatusChip(page, values.status);
   if (values.rating !== undefined) await pickRating(page, values.rating);
+  if (values.start_date !== undefined) await fields.started(page).fill(values.start_date);
+  if (values.finished_date !== undefined) await fields.finished(page).fill(values.finished_date);
 }
 
 /** Clicks one of the status chips ("Want to Read" | "Reading" | "Finished"). */
@@ -137,6 +183,15 @@ export async function openDeleteDialog(page) {
 export async function expectToast(page, text) {
   await expect(page.getByRole('status').filter({ hasText: text })).toBeVisible();
 }
+
+/**
+ * The status badge ("Want to Read" | "Reading" | "Finished").
+ *
+ * Matched exactly, because a book's details page now also shows the reader's own
+ * dates - "Finished 15 Sept 2026" - and a substring match finds both the badge
+ * and that date, which Playwright refuses to guess between.
+ */
+export const statusBadge = (page, label) => page.getByText(label, { exact: true });
 
 /**
  * The page's main `<h1>`.

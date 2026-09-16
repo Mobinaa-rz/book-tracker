@@ -80,6 +80,10 @@ export function EditBookPage() {
             status: book.status,
             rating: book.rating,
             notes: book.notes,
+            // Both dates are passed on because the form submits the whole book
+            // (PUT is a full update) - omitting them here would clear them.
+            start_date: book.start_date,
+            finished_date: book.finished_date,
           }}
           onSubmit={handleSubmit}
           submitLabel="Save changes"

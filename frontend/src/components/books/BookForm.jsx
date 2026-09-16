@@ -11,7 +11,31 @@ import { Alert } from '../ui/Alert.jsx';
 
 const LIMITS = { title: 200, author: 200, notes: 2000 };
 
-const EMPTY = { title: '', author: '', status: 'want_to_read', rating: null, notes: '' };
+const EMPTY = {
+  title: '',
+  author: '',
+  status: 'want_to_read',
+  rating: null,
+  notes: '',
+  start_date: '',
+  finished_date: '',
+};
+
+/** The two calendar dates, as 'YYYY-MM-DD' strings ('' means "no date"). */
+const DATE_FIELDS = ['start_date', 'finished_date'];
+
+/**
+ * The API sends `null` for a date that is not set, but `<input type="date">`
+ * needs a string: a null value would make React treat the field as
+ * uncontrolled and then warn when the reader types into it.
+ */
+function normalizeDates(values) {
+  const next = { ...values };
+  for (const field of DATE_FIELDS) {
+    if (next[field] === null || next[field] === undefined) next[field] = '';
+  }
+  return next;
+}
 
 const STATUS_OPTIONS = STATUSES.map((s) => ({ ...s, dotColor: STATUS_DOT_COLORS[s.value] }));
 
@@ -23,6 +47,12 @@ export function validateBook(values) {
   if (!values.author.trim()) errors.author = 'Author is required';
   else if (values.author.trim().length > LIMITS.author) errors.author = `Author must be at most ${LIMITS.author} characters`;
   if (values.notes.length > LIMITS.notes) errors.notes = `Notes must be at most ${LIMITS.notes} characters`;
+  // 'YYYY-MM-DD' strings sort chronologically, so a text comparison is enough.
+  // The wording matches the API's, so the reader sees the same message whether
+  // it is caught here or by the server.
+  if (values.start_date && values.finished_date && values.finished_date < values.start_date) {
+    errors.finished_date = 'Finished date cannot be before the start date';
+  }
   return errors;
 }
 
@@ -34,7 +64,7 @@ export function validateBook(values) {
 export function BookForm({ initialValues, onSubmit, submitLabel, submittingLabel, cancelTo }) {
   const navigate = useNavigate();
   const handleSessionExpiry = useSessionExpiry();
-  const [values, setValues] = useState({ ...EMPTY, ...initialValues });
+  const [values, setValues] = useState(() => normalizeDates({ ...EMPTY, ...initialValues }));
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -68,6 +98,12 @@ export function BookForm({ initialValues, onSubmit, submitLabel, submittingLabel
         status: values.status,
         rating: values.rating ?? null,
         notes: values.notes.trim(),
+        // Always sent, never omitted. PUT is a full update, so a missing field
+        // takes its default rather than keeping what is stored - leaving these
+        // out would silently wipe a date on every edit (as it already would for
+        // rating and notes). An empty input means "no date", so it becomes null.
+        start_date: values.start_date || null,
+        finished_date: values.finished_date || null,
       });
     } catch (error) {
       if (handleSessionExpiry(error)) return;
@@ -122,6 +158,42 @@ export function BookForm({ initialValues, onSubmit, submitLabel, submittingLabel
             />
           )}
         </Field>
+
+        {/* The two calendar dates belong together, so they share a row, and the
+            hints say out loud that changing the status fills them in. */}
+        <div className="form-row">
+          <Field
+            label="Started"
+            hint="Optional — filled in for you when the status becomes Reading"
+            error={errors.start_date}
+            id="start_date"
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="date"
+                value={values.start_date}
+                onChange={(e) => update('start_date', e.target.value)}
+              />
+            )}
+          </Field>
+
+          <Field
+            label="Finished"
+            hint="Optional — filled in for you when the status becomes Finished"
+            error={errors.finished_date}
+            id="finished_date"
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type="date"
+                value={values.finished_date}
+                onChange={(e) => update('finished_date', e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
 
         <Field label="Rating" hint="Optional — click a star again to clear it" error={errors.rating} id="rating">
           {(props) => (
